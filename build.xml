@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Build" default="build" basedir="." description="Build sites">
+  <taskdef name="drush" classname="classes.phingdrush.DrushTask" />
+
+  <!-- load variable definitions -->
+  <property file="build.properties" />
+
+  <target name="build" depends="install_dependencies, getdrupal, drupaldb, cleanconfig">
+    <echo message="Specify build commands" />
+  </target>
+
+  <target name="install_dependencies" description="Install dependencies for the rest of the build script.">
+    <if>
+      <not>
+        <available file="./classes/phingdrush" type="dir" property="drupal.exists" value="true" />
+      </not>
+      <then>
+        <echo message="Install Drush phing task from http://drupal.org/project/phingdrushtask" />
+        <gitclone
+          repository="http://git.drupal.org/project/phingdrushtask.git"
+          targetPath="./classes/phingdrush" />
+        <gitcheckout
+          repository="./classes/phingdrush"
+          branchname="7.x-1.x"
+          startpoint="7.x-1.0"
+          />
+
+      </then>
+    </if>
+  </target>
+
+  <target name="getdrupal" description="Downloads Drupal and checks out the specified branch.">
+    <!-- Clone repository -->
+    <if>
+      <not>
+        <available file="${drupal.sitedir}" type="dir" property="drupal.exists" value="true" />
+      </not>
+      <then>
+        <echo message="Cloning repository from ${drupal.repo} to ${drupal.sitedir}" />
+        <gitclone
+          repository="${drupal.repo}"
+          targetPath="${drupal.sitedir}" />
+        <gitcheckout
+          repository="${drupal.sitedir}"
+          branchname="${drupal.branch}"
+          />
+      </then>
+      <else>
+        <echo message="Updating repository from ${drupal.repo} to ${drupal.sitedir}" />
+        <gitpull
+
+          repository="${drupal.sitedir}"
+          all="true" />
+        <gitcheckout
+          repository="${drupal.sitedir}"
+          branchname="${drupal.branch}"
+          />
+      </else>
+    </if>
+
+  </target>
+
+  <target name="drupaldb" description="Create Drupal database and assign permissions">
+    <propertyprompt
+      propertyName        = "db.user"
+      promptText          = "Enter administrative database username"
+      />
+    <propertyprompt
+      propertyName        = "db.password"
+      promptText          = "Enter password"
+      />
+
+    <pdosqlexec url="mysql:host=${drupal.db.host}" userid="${db.user}" password="${db.password}">
+      DROP DATABASE IF EXISTS ${drupal.db.name};
+      CREATE DATABASE ${drupal.db.name};
+    </pdosqlexec>
+    <pdosqlexec url="mysql:host=${drupal.db.host}" userid="${db.user}" password="${db.password}">
+      GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER
+      ON ${drupal.db.name}.*
+      TO '${drupal.db.user}'@'localhost' IDENTIFIED BY '${drupal.db.pass}';
+    </pdosqlexec>
+  </target>
+
+  <target name="cleanconfig" description="Clean previous config from install">
+    <if>
+      <available file="${drupal.sitedir}/sites/default/files/config_*" property="drupal.config.exists" />
+      <then>
+        <delete file="${drupal.sitedir}/sites/default/files/config_*" />
+      </then>
+    </if>
+
+    <if>
+      <not>
+        <available file="${drupal.sitedir}/sites/default/files" type="dir" property="drupal.files.exists" />
+      </not>
+      <then>
+        <mkdir dir="${drupal.sitedir}/sites/default/files" />
+      </then>
+    </if>
+
+    <copy file="${drupal.sitedir}/sites/default/default.settings.php" tofile="${drupal.sitedir}/sites/default/settings.php" overwrite="true"/>
+
+  </target>
+
+
+  <target name="installdrupal" description="Make settings files and install drupal DB">
+    <drush command="site-install" assume="yes">
+      <option name="locale">uk</option>
+      <option name="site-name" value="${drupal.sitename}" />
+      <option name="web_root" value="${drupal.sitedir}" />
+      <param>expert</param>
+    </drush>
+  </target>
+
+</project>

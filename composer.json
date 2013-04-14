@@ -1,0 +1,8 @@
+{
+    "require": {
+        "phing/phing": "2.4.13"
+    },
+    "config": {
+        "bin-dir": "bin/"
+    }
+}
