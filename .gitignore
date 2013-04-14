@@ -1,2 +1,7 @@
+# Ignore IDE files
 .idea
+
+# Composer files and directories
 vendor
+bin
+composer.phar
